@@ -22,7 +22,7 @@ jobs:
           token: ${{ secrets.PULL_TOKEN }}
 
       - name: Build OCT container image
-        run:  docker build -t quay.io/greyerof/oct:latest --build-arg TOKEN=${{ secrets.PULL_TOKEN }} --no-cache .
+        run:  docker build -t quay.io/testnetworkfunction/oct:latest --build-arg TOKEN=${{ secrets.PULL_TOKEN }} --no-cache .
 
       - name: Authenticate against Quay.io
         uses: docker/login-action@v2
@@ -34,4 +34,4 @@ jobs:
           password: ${{ secrets.QUAY_ROBOT_TOKEN }}
 
       - name: Push the newly built image to Quay.io
-        run: docker push quay.io/greyerof/oct:latest
+        run: docker push quay.io/testnetworkfunction/oct:latest
