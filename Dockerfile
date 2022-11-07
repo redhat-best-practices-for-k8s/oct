@@ -1,5 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi:latest AS build
-ARG OCT_BRANCH=main
+FROM registry.access.redhat.com/ubi8/ubi:latest AS builder
 ARG OCT_REPO=github.com/test-network-function/oct.git
 ARG TOKEN
 ENV OCT_FOLDER=/usr/oct
@@ -21,7 +20,7 @@ RUN if [[ "$(uname -m)" -eq "x86_64" ]] ; then \
          echo "CPU architecture not supported" && exit 1; \
      fi
 
-# Add go and oc binary directory to $PATH
+# Add go binary directory to $PATH
 ENV PATH=${PATH}:"/usr/local/go/bin":${GOPATH}/"bin"
 
 WORKDIR /root
@@ -31,22 +30,20 @@ WORKDIR /root/oct
 RUN make build-oct && \
     mkdir -p ${OCT_FOLDER} && \
 	mkdir -p ${OCT_DB_FOLDER} && \
-	ls -la ${OCT_FOLDER} && \
-    cp oct ${OCT_FOLDER} && \
-    ls -la ${OCT_FOLDER}/*
+    cp oct ${OCT_FOLDER}
 
 RUN ./oct fetch --operator --container --helm && \
-    ls -laR cmd/tnf/fetch/data/* && \
 	cp -a cmd/tnf/fetch/data/* ${OCT_DB_FOLDER} && \
 	cp scripts/run.sh ${OCT_FOLDER} && \
     chmod -R 777 ${OCT_DB_FOLDER}
 
-# Copy the state into a new flattened image to reduce (layers) size.
+# Copy the oct folder to a new minimal flattened image to reduce size.
 # It should also hide the pull token.
-FROM scratch
-COPY --from=build / /
-
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 ENV OCT_FOLDER=/usr/oct
+
+COPY --from=builder ${OCT_FOLDER} ${OCT_FOLDER}
+
 WORKDIR ${OCT_FOLDER}
 
 ENV SHELL=/bin/bash

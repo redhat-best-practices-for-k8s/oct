@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi:latest AS build
+FROM registry.access.redhat.com/ubi8/ubi:latest AS builder
 ARG OCT_LOCAL_FOLDER
 
 ENV OCT_FOLDER=/usr/oct
@@ -20,7 +20,7 @@ RUN if [[ "$(uname -m)" -eq "x86_64" ]] ; then \
          echo "CPU architecture not supported" && exit 1; \
      fi
 
-# Add go and oc binary directory to $PATH
+# Add go binary directory to $PATH
 ENV PATH=${PATH}:"/usr/local/go/bin":${GOPATH}/"bin"
 
 WORKDIR /root
@@ -42,10 +42,11 @@ RUN ./oct fetch --operator --container --helm && \
 
 # Copy the state into a new flattened image to reduce (layers) size.
 # It should also hide the pull token.
-FROM scratch
-COPY --from=build / /
-
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 ENV OCT_FOLDER=/usr/oct
+
+COPY --from=builder ${OCT_FOLDER} ${OCT_FOLDER}
+
 WORKDIR ${OCT_FOLDER}
 
 ENV SHELL=/bin/bash
