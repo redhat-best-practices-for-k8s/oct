@@ -7,7 +7,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.10.1
+	helm.sh/helm/v3 v3.10.2
 )
 
 require (
