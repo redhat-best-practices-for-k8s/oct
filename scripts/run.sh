@@ -3,6 +3,8 @@
 DB_FOLDER=cmd/tnf/fetch/data
 DUMP_DB_FOLDER=/tmp/dump
 
+rm -rf ${DUMP_DB_FOLDER}/*
+
 if [[ "$OCT_DUMP_ONLY" == "true" ]]; then
     echo "OCT: Dumping current DB to ${DUMP_DB_FOLDER}"
     cp -a ${DB_FOLDER} ${DUMP_DB_FOLDER}
