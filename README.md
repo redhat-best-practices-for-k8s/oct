@@ -1,26 +1,17 @@
 # oct - Offline Catalog Tool for Red Hat's certified containerized artifacts
-This is a demo/proof of concept of a containerized tool that retrieves the last certified artifacts (operators, containers and helm charts) from the [Red Hat's online catalog](https://catalog.redhat.com/api/containers/v1/ui/) to be used by RH's certification tools like [TNF](https://github.com/test-network-function/cnf-certification-test) or similar.
+OCT is a containerized application that retrieves the latest certified artifacts (operators, containers and helm charts) from the [Red Hat's online catalog](https://catalog.redhat.com/api/containers/v1/ui/) to be used by RH's certification tools like [TNF](https://github.com/test-network-function/cnf-certification-test) or similar.
 
 # Important
 This is a Work in Progress PoC/demo project, not a complete/GA nor a ready to use tool. Most of the code was copied from the [TNF repo](https://github.com/test-network-function/cnf-certification-test) in order to get a running code quickly.
 
 # Motivation
-Currently, TNF has a copy of the offline catalog of certified artifacts inside the TNF's container. In that Github's repo, there's an independent [workflow](https://github.com/test-network-function/cnf-certification-test/blob/main/.github/workflows/update-certification.yml) that creates an automatic PR to update the db files of the repo, which in turn will trigger the creation of a new container. This has some problems:
-- The PR needs to be manually approved so the new container can be created automatically when it's merged.
-- The DB itself is embedded in the repo, which doesn't make any sense (at least to me).
-- The workflow to update the DB runs (only?) once a day.
-- Partners usually want to run "stable" TNF releases (v3, v4...) so the DB inside those releases' container can be quite outdated.
-
-OCT tries to decouple the DB storing and updating tasks, as it's an isolated container. Instead of creating a new PR, this repo has a [workflow](https://github.com/test-network-function/oct/blob/main/.github/workflows/recreate-image.yml) that creates a new container with the new catalog db and pushes it to quay.io, so no PRs are needed. Also, the container can be run in order to get the latest copy of certified artifacts from the online catalog. This would allow the partners to get the latest version of the catalog right before running the TNF tool for their certification processes.
-Right now, the `oct` container is stored here: quay.io/greyerof/oct:latest and the DB files keep the same format as the TNF's [fetch](https://github.com/test-network-function/cnf-certification-test/blob/main/cmd/tnf/fetch/fetch.go) tool, as that tool was copied here as a starting point.
-
 ## Completely disconnected environments issue
 
-Tipically, partners run the TNF container in a "bastion" host or whatever linux machine with access to the OCP nodes. In case that machine does not have internet access for security or any other reasons, TNF will run in a fully/completely disconnected environment. That's not a problem for TNF, except for one test suite: `affiliated-certification`. The test cases on that test suite will check the certification status of the CNF's containers, operators and/or helm chart releases. To do so, it relays on two mechanisms: firstly, these test cases will try to reach the Red Hat's online catalog, which is just a regular HTTP rest service that can be accessed from anywhere, anytime. In case this service is not reachable, which will happen in a completely disconnected environment, the test case falls back to an "offline" check mechanism, which involves querying the TNF's embedded catalog. So, if the TNF release is too old, those test cases could fail, as the RH's catalog for certified artifacts is continuosly updated, with a lot of new entries being added, modified or removed every day.
+Tipically, partners run the TNF container in a "bastion" host or whatever Linux machine with access to the OCP nodes. In case that machine does not have internet access for security or any other reasons, TNF will run in a fully/completely disconnected environment. That's not a problem for TNF, except for one test suite: `affiliated-certification`. The test cases on that test suite will check the certification status of the CNF's containers, operators and/or helm charts releases. To do so, it relies on two mechanisms: first, these test cases will try to reach the Red Hat's online catalog, which is just a regular HTTP rest service that can be accessed from anywhere, anytime. In case this service is not reachable, which will happen in a completely disconnected environment, the test case falls back to an "offline" check mechanism, which involves querying the TNF's embedded catalog. So, if the TNF release is too old, those test cases could fail, as the RH's catalog for certified artifacts is continuosly updated, with a lot of new entries being added, modified or removed every day.
 
 If a partner is using the latest official TNF release, let's say v4.1, it will come with an embedded offline catalog that was downloaded and embedded at the same moment the v4.1 version was released. For each day that passes, that offline catalog will be more and more outdated, but the partners will be using that v4.1 until v4.2 comes out, which could take months. If they upgrade their CNFs with new operators/containers that have been added recently to the online catalog, the TNF certification test cases will fail.
 
-The OCT container image will help here, as it's (planned to be) updated twice a day. The workflow for partners that want to run TNF in fully disconnected environments would be the following:
+The OCT container image will help here, as it's updated four times a day. The workflow for partners that want to run TNF in fully disconnected environments would be the following:
 1. In a separate server, with internet access, download the latest OCT image container.
 2. Copy that image into the bastion host, or the machine where TNF will run.
 3. Run the OCT container in dump-only mode, which will create a folder with the internal catalog files.
@@ -99,12 +90,6 @@ TNF's fetch CLI tool code was copied here, so the syntax is the same, but it's h
 The `oct` container has a script [run.sh](https://github.com/test-network-function/oct/blob/main/scripts/run.sh) that will run the TNF's `fetch` command. If it succeeds, the db files are copied into the container's `/tmp/dump` folder. The `OCT_DUMP_ONLY` env var is used to bypass the call to `fetch` so the current content of the container's db is copied into /tmp/dump.
 
 The `fetch` tool was updated in this repo to retrieve the operator and container pages in a concurrent way, using a go routine for each http get. I did this modification to speed up the dev tests, as the original `fetch` implementation to the the sequantial retrieval of catalog pages was too slow (RH's online catalog takes a lot of time for each response). Do not pay too much attention to the current implementation, as the original `fetch` tool's code was copied some weeks ago, and it was modified later by some PRs in the TNF's repo.
-# Next steps
-TNF Certification Tool would need to be updated to use this container instead of its internal db folders. The simplest way that I can think of is passing the local db folder created by `oct` to the TNF container as a new docker/podman argument. For example, the --offline-db argument could be passed to the `run-tnf-container-sh` so it can call the TNF container with the proper `-v` argument.
-```
-$ ./run-tnf-container.sh --offline-db /full/path/to/db -t /home/greyerof/github/tnf-new_arch/cnf-certification-test -i quay.io/testnetworkfunction/cnf-certification-test:latest -f affiliated-certification
-```
-
 # Issues/Caveats/Warnings
 The current TNF's `fetch` tool (used in `oct`) works like this:
 1. First it calls the catalog api to get the number of artifacts.
