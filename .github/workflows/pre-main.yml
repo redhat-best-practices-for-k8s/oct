@@ -1,0 +1,41 @@
+name: Test Incoming Changes
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  basic-check:
+    name: Build, Lint, Vet
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Set up Go 1.19
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19.4
+
+      - name: Disable default go problem matcher
+        run: echo "::remove-matcher owner=go::"
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.sha }}
+
+      # TODO: golangci-lint team recommends using a GitHub Action to perform golangci-lint responsibilities.  However
+      # there does not appear to be a way to honor our existing .golangci.yml.  For now, mimic developer behavior.
+      - name: Install golangci-lint
+        run: make install-lint
+
+      - name: make build-oct
+        run: make build-oct
+
+      - name: make lint
+        run: make lint
+
+      - name: make vet
+        run: make vet
