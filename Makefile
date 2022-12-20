@@ -14,6 +14,7 @@
 # Tasks provide shortcuts to common operations that occur frequently during
 # development. This includes running configured linters and executing unit tests
 
+GO_PATH=$(shell go env GOPATH)
 GO_PACKAGES=$(shell go list ./... | grep -v vendor)
 
 .PHONY:	build \
