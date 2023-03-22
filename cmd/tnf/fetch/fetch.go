@@ -60,7 +60,7 @@ func NewCommand() *cobra.Command {
 }
 
 // RunCommand execute the fetch subcommands
-func RunCommand(cmd *cobra.Command, args []string) error {
+func RunCommand(cmd *cobra.Command, _ []string) error {
 	data := getCertifiedCatalogOnDisk()
 	log.Infof("Current offline artifacts: %+v", data)
 	b, err := cmd.PersistentFlags().GetBool(operatorFlag)
