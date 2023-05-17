@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/hashicorp/go-version v1.6.0
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.2
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.2
 	gopkg.in/yaml.v3 v3.0.1
