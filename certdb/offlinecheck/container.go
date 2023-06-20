@@ -43,8 +43,7 @@ type ContainerCatalogEntry struct {
 	ID                string       `json:"_id"`
 	Architecture      string       `json:"architecture"`
 	Certified         bool         `json:"certified"`
-	DockerImageDigest string       `json:"docker_image_digest"`
-	DockerImageID     string       `json:"docker_image_id"` // image digest
+	DockerImageDigest string       `json:"image_id"`
 	Repositories      []Repository `json:"repositories"`
 }
 type ContainerPageCatalog struct {
