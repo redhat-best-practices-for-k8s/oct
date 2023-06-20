@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -16,20 +17,22 @@ import (
 
 var (
 	// containersCatalogSizeURL = "https://catalog.redhat.com/api/containers/v1/images?filter=certified==true&page=0&include=total,page_size"
-	containersCatalogPageURL = "https://catalog.redhat.com/api/containers/v1/images?filter=certified==true&page_size=%d&page=%d&include=data.repositories,data.docker_image_digest,data.architecture"
-	operatorsCatalogSizeURL  = "https://catalog.redhat.com/api/containers/v1/operators/bundles?filter=organization==certified-operators"
-	operatorsCatalogPageURL  = "https://catalog.redhat.com/api/containers/v1/operators/bundles?filter=organization==certified-operators&page_size=%d&page=%d"
-	helmCatalogURL           = "https://charts.openshift.io/index.yaml"
-	containersRelativePath   = "%s/cmd/tnf/fetch/data/containers/containers.db"
-	operatorsRelativePath    = "%s/cmd/tnf/fetch/data/operators/"
-	helmRelativePath         = "%s/cmd/tnf/fetch/data/helm/helm.db"
-	certifiedcatalogdata     = "%s/cmd/tnf/fetch/data/archive.json"
-	operatorFileFormat       = "operator_catalog_page_%d_%d.db"
+	containersCatalogPageURL       = "https://catalog.redhat.com/api/containers/v1/images?filter=certified==true&page_size=%d&page=%d&include=data.repositories,data.image_id,data.architecture"
+	redhatContainersCatalogPageURL = "https://catalog.redhat.com/api/containers/v1/images?filter=repositories.published_date>@DATE@ and repositories.registry==registry.access.redhat.com&page_size=%d&page=%d&include=data.repositories,data.image_id,data.architecture"
+	operatorsCatalogSizeURL        = "https://catalog.redhat.com/api/containers/v1/operators/bundles?filter=organization==certified-operators"
+	operatorsCatalogPageURL        = "https://catalog.redhat.com/api/containers/v1/operators/bundles?filter=organization==certified-operators&page_size=%d&page=%d"
+	helmCatalogURL                 = "https://charts.openshift.io/index.yaml"
+	containersRelativePath         = "%s/cmd/tnf/fetch/data/containers/containers.db"
+	operatorsRelativePath          = "%s/cmd/tnf/fetch/data/operators/"
+	helmRelativePath               = "%s/cmd/tnf/fetch/data/helm/helm.db"
+	certifiedcatalogdata           = "%s/cmd/tnf/fetch/data/archive.json"
+	operatorFileFormat             = "operator_catalog_page_%d_%d.db"
 )
 
 const (
 	// Pyxies guarantees that 100 is a time-proof value. Hardcoding it is a bad idea, though.
 	defaultContainersCatalogPageSize = 100
+	dateKey                          = "@DATE@"
 )
 
 var (
@@ -262,10 +265,12 @@ func getOperatorCatalog(data *CertifiedCatalog) error {
 	return nil
 }
 
-func getContainerCatalogPage(page, size uint, db map[string]*offlinecheck.ContainerCatalogEntry) (entries int, err error) {
+func getContainerCatalogPage(page, size uint, db map[string]*offlinecheck.ContainerCatalogEntry, pageURL string) (entries int, err error) {
 	start := time.Now()
 
-	url := fmt.Sprintf(containersCatalogPageURL, size, page)
+	url := fmt.Sprintf(pageURL, size, page)
+	// encoding spaces
+	url = strings.ReplaceAll(url, " ", "%20")
 	log.Infof("Getting containers catalog page %d, url: %s", page, url)
 
 	body, err := getHTTPBody(url)
@@ -310,31 +315,30 @@ func serializeContainersDB(db map[string]*offlinecheck.ContainerCatalogEntry) er
 	return nil
 }
 
-func getContainerCatalog(data *CertifiedCatalog) error {
+func getContainerCatalog(data *CertifiedCatalog) (err error) {
 	start := time.Now()
 	db := make(map[string]*offlinecheck.ContainerCatalogEntry)
 
-	err := removeContainersDB()
+	// Limit the Redhat certified containers to be at most 1 year old
+	redhatContainersCatalogPageURLDated := strings.ReplaceAll(redhatContainersCatalogPageURL, dateKey, start.AddDate(-1, 0, 0).Format("2006-01-02"))
+
+	err = removeContainersDB()
 	if err != nil {
 		return fmt.Errorf("failed to remove containers db: %w", err)
 	}
 
 	log.Infof("Downloading pages of size %d entries.", defaultContainersCatalogPageSize)
-
 	total := 0
-	for page := uint(0); ; page++ {
-		entries, pageError := getContainerCatalogPage(page, defaultContainersCatalogPageSize, db)
-		if pageError != nil {
-			return fmt.Errorf("failed to get containers page %d: %w", page, pageError)
-		}
 
-		log.Infof("Container page %d downloaded. Entries: %d", page, entries)
+	containerPageUrls := []string{redhatContainersCatalogPageURLDated, // partner images query, certified field means that the image is certified by redhat
+		containersCatalogPageURL} // redhat images query, the certified field is unused. All images in this repo are certified
+	for _, pageURL := range containerPageUrls {
+		var entries int
+		entries, err = getContainerEntries(db, pageURL)
+		if err != nil {
+			return fmt.Errorf("getting entries from %s db: %w", pageURL, err)
+		}
 		total += entries
-
-		// Last page?
-		if entries != defaultContainersCatalogPageSize {
-			break
-		}
 	}
 
 	serializeStart := time.Now()
@@ -350,6 +354,25 @@ func getContainerCatalog(data *CertifiedCatalog) error {
 	log.Info("Time to process all the container: ", time.Since(start))
 
 	return nil
+}
+
+func getContainerEntries(db map[string]*offlinecheck.ContainerCatalogEntry, pageURL string) (allEntries int, err error) {
+	allEntries = 0
+	for page := uint(0); ; page++ {
+		entries, pageError := getContainerCatalogPage(page, defaultContainersCatalogPageSize, db, pageURL)
+		if pageError != nil {
+			return allEntries, fmt.Errorf("failed to get containers page %d: %w", page, pageError)
+		}
+
+		log.Infof("Container page %d downloaded. Entries: %d", page, entries)
+		allEntries += entries
+
+		// Last page?
+		if entries != defaultContainersCatalogPageSize {
+			break
+		}
+	}
+	return allEntries, nil
 }
 
 func getHelmCatalog() error {

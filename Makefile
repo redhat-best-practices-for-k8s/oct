@@ -57,7 +57,7 @@ coverage-html: test
 	go tool cover -html cover.out
 
 update-certified-catalog:
-	./tnf fetch --operator --container --helm
+	./oct fetch --operator --container --helm
 
 # Update source dependencies and fix versions
 update-deps:
