@@ -34,9 +34,10 @@ type Tag struct {
 	Name string `json:"name"`
 }
 type Repository struct {
-	Registry   string `json:"registry"`
-	Repository string `json:"repository"`
-	Tags       []Tag  `json:"tags"`
+	Registry              string `json:"registry"`
+	Repository            string `json:"repository"`
+	Tags                  []Tag  `json:"tags"`
+	DockerImageListDigest string `json:"manifest_list_digest"`
 }
 
 type ContainerCatalogEntry struct {
@@ -85,7 +86,12 @@ func LoadBinary(bytes []byte, db map[string]*ContainerCatalogEntry) (entries int
 	entries = len(aCatalog.Data)
 	for i := 0; i < entries; i++ {
 		c := aCatalog.Data[i]
+		// image digest based entry
 		db[c.DockerImageDigest] = &c
+		if len(c.Repositories) > 0 {
+			// image list digest based entry
+			db[c.Repositories[0].DockerImageListDigest] = &c
+		}
 	}
 
 	return entries, nil
