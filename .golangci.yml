@@ -2,13 +2,13 @@ linters-settings:
   dupl:
     threshold: 100
   funlen:
-    lines: 50
-    statements: 25
+    lines: 60
+    statements: 45
   gci:
     local-prefixes: github.com/golangci/golangci-lint
   goconst:
     min-len: 4
-    min-occurrences: 1
+    min-occurrences: 2
   gocritic:
     enabled-tags:
       - diagnostic
@@ -19,7 +19,7 @@ linters-settings:
     disabled-checks:
       - whyNoLint
   gocyclo:
-    min-complexity: 15
+    min-complexity: 20
   goimports:
     local-prefixes: github.com/golangci/golangci-lint
   gomnd:
@@ -51,7 +51,6 @@ linters:
   disable-all: true
   enable:
     - bodyclose
-    - depguard
     - dogsled
     - errcheck
     - exhaustive
@@ -70,7 +69,6 @@ linters:
     - ineffassign
     - lll
     - misspell
-    - nakedret
     - nolintlint
     - revive
     - rowserrcheck
@@ -83,6 +81,7 @@ linters:
     - whitespace
   # do not enable:
   # - asciicheck
+  # - depguard
   # - dupl
   # - gochecknoglobals
   # - gochecknoinits
@@ -91,6 +90,7 @@ linters:
   # - godox
   # - goerr113
   # - maligned
+  # - nakedret
   # - nestif
   # - noctx
   # - prealloc
@@ -101,11 +101,12 @@ linters:
 issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
-    # Ignore magic numbers and inline strings in tests.
+    # Ignore magic numbers, inline strings and function length in tests.
     - path: _test\.go
       linters:
         - gomnd
         - goconst
+        - funlen
     # Ignore line length for string assignments (do not try and wrap regex definitions)
     - linters:
         - lll
@@ -120,6 +121,6 @@ issues:
 # golangci.com configuration
 # https://github.com/golangci/golangci/wiki/Configuration
 service:
-  golangci-lint-version: 1.50.x # use the fixed version to not introduce new linters unexpectedly
+  golangci-lint-version: 1.54.x # use the fixed version to not introduce new linters unexpectedly
   prepare:
     - echo "here I can run custom commands, but no preparation needed for this repo"

@@ -10,7 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/test-network-function/oct/internal/api/offlinecheck"
+	"github.com/test-network-function/oct/pkg/certdb/offlinecheck"
 	"gopkg.in/yaml.v3"
 )
 
@@ -60,7 +60,7 @@ func NewCommand() *cobra.Command {
 }
 
 // RunCommand execute the fetch subcommands
-func RunCommand(cmd *cobra.Command, args []string) error {
+func RunCommand(cmd *cobra.Command, _ []string) error {
 	data := getCertifiedCatalogOnDisk()
 	log.Infof("Current offline artifacts: %+v", data)
 	b, err := cmd.PersistentFlags().GetBool(operatorFlag)
@@ -218,7 +218,6 @@ func getOperatorCatalogPage(page, size uint, isLastPage bool) error {
 	return nil
 }
 
-//nolint:funlen
 func getOperatorCatalog(data *CertifiedCatalog) error {
 	start := time.Now()
 	total, pageSize, err := getOperatorCatalogSize()

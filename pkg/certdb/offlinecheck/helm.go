@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2022 Red Hat, Inc.
+// Copyright (C) 2020-2023 Red Hat, Inc.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,22 +19,21 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
-	"github.com/hashicorp/go-version"
-	log "github.com/sirupsen/logrus"
+	"github.com/Masterminds/semver/v3"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/release"
 )
 
 const (
-	helmRelativePath = "%s/../cmd/tnf/fetch/data/helm/helm.db"
+	helmRelativePath = "%s/data/helm/helm.db"
 )
 
 type ChartEntry struct {
-	Name        string `yaml:"name"`
-	Version     string `yaml:"version"`
-	KubeVersion string `yaml:"kubeVersion"`
+	Name                  string `yaml:"name"`
+	ChartVersion          string `yaml:"version"`
+	KubeVersionConstraint string `yaml:"kubeVersion"`
 }
 type ChartStruct struct {
 	Entries map[string][]ChartEntry `yaml:"entries"`
@@ -43,27 +42,28 @@ type ChartStruct struct {
 var chartsdb = make(map[string][]ChartEntry)
 var loaded = false
 
-func loadHelmCatalog(pathToRoot string) {
+func loadHelmCatalog(offlineDBPath string) error {
 	if loaded {
-		return
+		return nil
 	}
 	loaded = true
-	filePath := fmt.Sprintf(helmRelativePath, pathToRoot)
+	filePath := fmt.Sprintf(helmRelativePath, offlineDBPath)
 	f, err := os.Open(filePath)
 	if err != nil {
-		log.Error("Cannot process file", f.Name(), err, " trying to proceed")
-		return
+		return fmt.Errorf("cannot process file %s, err: %v", filePath, err)
 	}
 	defer f.Close()
 	bytes, err := io.ReadAll(f)
 	if err != nil {
-		log.Error("Cannot process file", f.Name(), err, " trying to proceed")
+		return fmt.Errorf("cannot process file %s, err: %v", filePath, err)
 	}
 	var charts ChartStruct
 	if err = yaml.Unmarshal(bytes, &charts); err != nil {
-		log.Error("error while parsing the yaml file of the helm certification list ", err)
+		return fmt.Errorf("cannot parse the yaml file of the helm certification list, err: %v", err)
 	}
 	chartsdb = charts.Entries
+
+	return nil
 }
 
 func LoadHelmCharts(charts ChartStruct) {
@@ -72,32 +72,27 @@ func LoadHelmCharts(charts ChartStruct) {
 }
 
 // CompareVersion compare between versions
-func CompareVersion(ver1, ver2 string) bool {
-	ourKubeVersion, _ := version.NewVersion(ver1)
-	kubeVersion := strings.ReplaceAll(ver2, " ", "")[2:]
-	if strings.Contains(kubeVersion, "<") {
-		kubever := strings.Split(kubeVersion, "<")
-		minVersion, _ := version.NewVersion(kubever[0])
-		maxVersion, _ := version.NewVersion(kubever[1])
-		if ourKubeVersion.GreaterThanOrEqual(minVersion) && ourKubeVersion.LessThan(maxVersion) {
-			return true
-		}
-	} else {
-		kubever := strings.Split(kubeVersion, "-")
-		minVersion, _ := version.NewVersion(kubever[0])
-		if ourKubeVersion.GreaterThanOrEqual(minVersion) {
-			return true
-		}
+func CompareVersion(version, constraint string) bool {
+	c, err := semver.NewConstraint(constraint)
+	if err != nil {
+		logrus.Errorf("cannot parse semver constraint string=%s, err=%s", constraint, err)
 	}
-	return false
+
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		// Handle version not being parsable.
+		logrus.Errorf("cannot parse semver version, string=%s err=%s", version, err)
+	}
+	// Check if the version meets the constraints. The a variable will be true.
+	return c.Check(v)
 }
 
-func (checker OfflineChecker) IsReleaseCertified(helm *release.Release, ourKubeVersion string) bool {
+func (validator OfflineValidator) IsHelmChartCertified(helm *release.Release, ourKubeVersion string) bool {
 	for _, entryList := range chartsdb {
 		for _, entry := range entryList {
-			if entry.Name == helm.Chart.Metadata.Name && entry.Version == helm.Chart.Metadata.Version {
-				if entry.KubeVersion != "" {
-					if CompareVersion(ourKubeVersion, entry.KubeVersion) {
+			if entry.Name == helm.Chart.Metadata.Name && entry.ChartVersion == helm.Chart.Metadata.Version {
+				if entry.KubeVersionConstraint != "" {
+					if CompareVersion(ourKubeVersion, entry.KubeVersionConstraint) {
 						return true
 					}
 				} else {
