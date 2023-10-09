@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2022 Red Hat, Inc.
+// Copyright (C) 2020-2023 Red Hat, Inc.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/sirupsen/logrus"
+	"github.com/test-network-function/oct/pkg/certdb/config"
 )
 
 var (
@@ -34,10 +35,10 @@ type Tag struct {
 	Name string `json:"name"`
 }
 type Repository struct {
-	Registry              string `json:"registry"`
-	Repository            string `json:"repository"`
-	Tags                  []Tag  `json:"tags"`
-	DockerImageListDigest string `json:"manifest_list_digest"`
+	Registry      string `json:"registry"`
+	Repository    string `json:"repository"`
+	Tags          []Tag  `json:"tags"`
+	PublishedDate string `json:"push_date"`
 }
 
 type ContainerCatalogEntry struct {
@@ -86,12 +87,7 @@ func LoadBinary(bytes []byte, db map[string]*ContainerCatalogEntry) (entries int
 	entries = len(aCatalog.Data)
 	for i := 0; i < entries; i++ {
 		c := aCatalog.Data[i]
-		// image digest based entry
 		db[c.DockerImageDigest] = &c
-		if len(c.Repositories) > 0 {
-			// image list digest based entry
-			db[c.Repositories[0].DockerImageListDigest] = &c
-		}
 	}
 
 	return entries, nil
@@ -100,6 +96,11 @@ func LoadBinary(bytes []byte, db map[string]*ContainerCatalogEntry) (entries int
 func (validator OfflineValidator) IsContainerCertified(registry, repository, tag, digest string) bool {
 	const tagLatest = "latest"
 
+	// overwrite registry value with hardcoded one due to Pyxis implementation
+	value, ok := config.HardcodedRegistryMapping[registry]
+	if ok {
+		registry = value
+	}
 	if digest != "" {
 		if _, ok := containerdb[digest]; ok {
 			logrus.Trace("container is certified based on digest", digest)
@@ -121,7 +122,7 @@ func (validator OfflineValidator) IsContainerCertified(registry, repository, tag
 			if repo.Registry == registry && repo.Repository == repository {
 				for _, t := range repo.Tags {
 					if t.Name == tag {
-						logrus.Trace(fmt.Sprintf("container is not certified %s/%s:%s %s", registry, repository, tag, digest))
+						logrus.Trace(fmt.Sprintf("container is certified %s/%s:%s %s", registry, repository, tag, digest))
 						return true
 					}
 				}

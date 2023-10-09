@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2022 Red Hat, Inc.
+// Copyright (C) 2020-2023 Red Hat, Inc.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -13,4 +13,18 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-package offlinecheck
+package onlinecheck
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestGetRequest(t *testing.T) {
+	checker := NewOnlineValidator()
+	_, err := checker.GetRequest("http://non-existingurl.com")
+	assert.NotNil(t, err)
+	_, err = checker.GetRequest(redhatCatalogPingURL)
+	assert.Nil(t, err)
+}

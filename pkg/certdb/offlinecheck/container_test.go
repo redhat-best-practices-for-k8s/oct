@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2022 Red Hat, Inc.
+// Copyright (C) 2020-2023 Red Hat, Inc.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ const containersDBJSON = `{
 	   "_id":"",
 	   "architecture":"amd64",
 	   "certified":false,
-	   "docker_image_digest":"sha256:d2f388e163a5126f7112757f0475c8c4e036fe00c76ef8a7fd50848fafdcb96b",
+	   "image_id":"sha256:d2f388e163a5126f7112757f0475c8c4e036fe00c76ef8a7fd50848fafdcb96b",
 	   "docker_image_id":"",
 	   "repositories":[
 		  {
@@ -56,7 +56,7 @@ const containersDBJSON = `{
 	   "_id":"",
 	   "architecture":"amd64",
 	   "certified":false,
-	   "docker_image_digest":"sha256:fa8f2136aed9daf4c5a805068a87dd274016b8dddae36bc0b02e18b391690493",
+	   "image_id":"sha256:fa8f2136aed9daf4c5a805068a87dd274016b8dddae36bc0b02e18b391690493",
 	   "docker_image_id":"",
 	   "repositories":[
 		  {
@@ -88,7 +88,6 @@ func loadContainersDB() error {
 	return nil
 }
 
-//nolint:funlen
 func TestIsCertified(t *testing.T) {
 	validator := OfflineValidator{}
 

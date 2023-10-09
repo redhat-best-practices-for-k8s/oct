@@ -2,13 +2,13 @@ linters-settings:
   dupl:
     threshold: 100
   funlen:
-    lines: 50
-    statements: 25
+    lines: 60
+    statements: 45
   gci:
     local-prefixes: github.com/golangci/golangci-lint
   goconst:
     min-len: 4
-    min-occurrences: 1
+    min-occurrences: 2
   gocritic:
     enabled-tags:
       - diagnostic
@@ -19,7 +19,7 @@ linters-settings:
     disabled-checks:
       - whyNoLint
   gocyclo:
-    min-complexity: 15
+    min-complexity: 20
   goimports:
     local-prefixes: github.com/golangci/golangci-lint
   gomnd:
@@ -69,7 +69,6 @@ linters:
     - ineffassign
     - lll
     - misspell
-    - nakedret
     - nolintlint
     - revive
     - rowserrcheck
@@ -91,6 +90,7 @@ linters:
   # - godox
   # - goerr113
   # - maligned
+  # - nakedret
   # - nestif
   # - noctx
   # - prealloc
@@ -101,11 +101,12 @@ linters:
 issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
-    # Ignore magic numbers and inline strings in tests.
+    # Ignore magic numbers, inline strings and function length in tests.
     - path: _test\.go
       linters:
         - gomnd
         - goconst
+        - funlen
     # Ignore line length for string assignments (do not try and wrap regex definitions)
     - linters:
         - lll

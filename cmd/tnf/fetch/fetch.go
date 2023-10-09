@@ -10,7 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/test-network-function/oct/certdb/offlinecheck"
+	"github.com/test-network-function/oct/pkg/certdb/offlinecheck"
 	"gopkg.in/yaml.v3"
 )
 
@@ -218,7 +218,6 @@ func getOperatorCatalogPage(page, size uint, isLastPage bool) error {
 	return nil
 }
 
-//nolint:funlen
 func getOperatorCatalog(data *CertifiedCatalog) error {
 	start := time.Now()
 	total, pageSize, err := getOperatorCatalogSize()
