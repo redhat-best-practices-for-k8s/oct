@@ -36,6 +36,7 @@ import (
 // Here we are using only External endpoint to collect published containers and operator information
 
 const filterCertifiedOperatorsOrg = "organization==certified-operators"
+const filterRedHatOperatorsOrg = "organization==redhat-operators"
 const certifiedOperatorsCatalogURL = "https://catalog.redhat.com/api/containers/v1/operators/bundles?page_size=100&page=0&filter=csv_name==%s;%s"
 const certifiedContainerCatalogURL = "https://catalog.redhat.com/api/containers/v1/repositories/registry/%s/repository/%s/images?"
 const certifiedContainerCatalogDigestURL = "https://catalog.redhat.com/api/containers/v1/images?filter=image_id==%s"
@@ -218,21 +219,26 @@ func (validator OnlineValidator) IsOperatorCertified(csvName, ocpVersion, channe
 	_, operatorVersion := offlinecheck.ExtractNameVersionFromName(csvName)
 	var responseData []byte
 	var err error
-	url := fmt.Sprintf(certifiedOperatorsCatalogURL, csvName, filterCertifiedOperatorsOrg)
-	log.Trace(url)
-	if responseData, err = validator.GetRequest(url); err != nil || len(responseData) == 0 {
-		return false
+	catalogUrls := []string{
+		fmt.Sprintf(certifiedOperatorsCatalogURL, csvName, filterCertifiedOperatorsOrg),
+		fmt.Sprintf(certifiedOperatorsCatalogURL, csvName, filterRedHatOperatorsOrg),
 	}
-	operatorEntries := offlinecheck.OperatorCatalog{}
-	err = json.Unmarshal(responseData, &operatorEntries)
-	if err != nil {
-		log.Error("Cannot marshall binary data", err)
-		return false
-	}
-	for _, operator := range operatorEntries.Data {
-		_, opVersion := offlinecheck.ExtractNameVersionFromName(operator.CsvName)
-		if (opVersion == operatorVersion) && (operator.OcpVersion == ocpVersion || ocpVersion == "") && operator.Channel == channel {
-			return true
+	for _, url := range catalogUrls {
+		log.Trace(url)
+		if responseData, err = validator.GetRequest(url); err != nil || len(responseData) == 0 {
+			return false
+		}
+		operatorEntries := offlinecheck.OperatorCatalog{}
+		err = json.Unmarshal(responseData, &operatorEntries)
+		if err != nil {
+			log.Error("Cannot marshall binary data", err)
+			return false
+		}
+		for _, operator := range operatorEntries.Data {
+			_, opVersion := offlinecheck.ExtractNameVersionFromName(operator.CsvName)
+			if (opVersion == operatorVersion) && (operator.OcpVersion == ocpVersion || ocpVersion == "") && operator.Channel == channel {
+				return true
+			}
 		}
 	}
 	return false
