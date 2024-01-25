@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/ubi:9.3-1476 AS builder
+FROM registry.access.redhat.com/ubi9/ubi:9.3-1552 AS builder
 ARG OCT_LOCAL_FOLDER
 
 ENV OCT_FOLDER=/usr/oct
