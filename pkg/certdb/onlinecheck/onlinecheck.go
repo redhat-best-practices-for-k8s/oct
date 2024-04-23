@@ -43,7 +43,6 @@ const certifiedContainerCatalogDigestURL = "https://catalog.redhat.com/api/conta
 const certifiedContainerCatalogListDigestURL = "https://catalog.redhat.com/api/containers/v1/images?filter=repositories.manifest_list_digest==%s"
 const certifiedContainerCatalogTagURL = "https://catalog.redhat.com/api/containers/v1/repositories/registry/%s/repository/%s/tag/%s"
 const redhatCatalogPingURL = "https://catalog.redhat.com/api/containers/v1/ping"
-const redhatCatalogPingMongoDBURL = "https://catalog.redhat.com/api/containers/v1/status/mongo"
 
 var (
 	dataKey           = "data"
@@ -74,9 +73,6 @@ func NewOnlineValidator() OnlineValidator {
 // IsServiceReachable check if redhat catalog is reachable and its database is available to query
 func (validator OnlineValidator) IsServiceReachable() bool {
 	if _, err := validator.GetRequest(redhatCatalogPingURL); err != nil {
-		return false
-	}
-	if _, err := validator.GetRequest(redhatCatalogPingMongoDBURL); err != nil {
 		return false
 	}
 	return true
