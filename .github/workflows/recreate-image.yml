@@ -35,6 +35,10 @@ jobs:
           username: ${{ secrets.QUAY_ROBOT_USER }}
           password: ${{ secrets.QUAY_ROBOT_TOKEN }}
 
+      - name: Run endpoint verification script
+        run: |
+          ./scripts/curl-endpoints.sh
+
       - name: Build and push the latest images for multi-arch
         uses: docker/build-push-action@v5
         with:
@@ -47,3 +51,11 @@ jobs:
           push: true
           tags: |
             quay.io/testnetworkfunction/oct:latest
+
+
+      - name: If failed to create the image, send alert msg to dev team.
+        if: ${{ failure() }}
+        uses: ./.github/actions/slack-webhook-sender
+        with:
+          message: 'Failed to create official latest OCT image. Please check the logs.'
+          slack_webhook: '${{ secrets.SLACK_ALERT_WEBHOOK_URL }}'

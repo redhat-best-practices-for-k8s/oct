@@ -39,3 +39,7 @@ jobs:
 
       - name: make vet
         run: make vet
+
+      - name: Run endpoint verification script
+        run: |
+          ./scripts/curl-endpoints.sh
