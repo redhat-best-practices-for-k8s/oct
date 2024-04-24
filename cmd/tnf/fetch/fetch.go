@@ -16,7 +16,7 @@ import (
 
 var (
 	// containersCatalogSizeURL = "https://catalog.redhat.com/api/containers/v1/images?filter=certified==true&page=0&include=total,page_size"
-	containersCatalogPageURL = "https://catalog.redhat.com/api/containers/v1/images?filter=certified==true&page_size=%d&page=%d&include=data.repositories,data.image_id,data.architecture"
+	containersCatalogPageURL = "https://catalog.redhat.com/api/containers/v1/images?filter=certified==true&page_size=%d&page=%d&include=data.repositories,data.image_id,data.architecture,data.repositories.manifest_list_digest"
 	operatorsCatalogSizeURL  = "https://catalog.redhat.com/api/containers/v1/operators/bundles?filter=organization==certified-operators"
 	operatorsCatalogPageURL  = "https://catalog.redhat.com/api/containers/v1/operators/bundles?filter=organization==certified-operators&page_size=%d&page=%d"
 	helmCatalogURL           = "https://charts.openshift.io/index.yaml"
