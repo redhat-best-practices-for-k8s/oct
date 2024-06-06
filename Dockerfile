@@ -47,7 +47,7 @@ RUN ./oct fetch --operator --container --helm && \
 
 # Copy the oct folder to a new minimal flattened image to reduce size.
 # It should also hide the pull token.
-FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:ef6fb6b3b38ef6c85daebeabebc7ff3151b9dd1500056e6abc9c3295e4b78a51
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:0d6b09f233745d2fcf892cebcf1c18bbfed497f116bc8357e9db4b724d76c5a9
 ENV OCT_FOLDER=/usr/oct
 
 COPY --from=builder ${OCT_FOLDER} ${OCT_FOLDER}
