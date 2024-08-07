@@ -29,28 +29,6 @@ jobs:
       - name: Run endpoint verification script
         run: |
           ./scripts/curl-endpoints.sh
-
-      - name: Authenticate against Quay.io (testnetworkfunction)
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
-        with:
-          registry: quay.io
-          # Use a Robot Account to authenticate against Quay.io
-          # https://docs.quay.io/glossary/robot-accounts.html
-          username: ${{ secrets.QUAY_ROBOT_USER }}
-          password: ${{ secrets.QUAY_ROBOT_TOKEN }}
-
-      - name: Build and push the latest images for multi-arch (Legacy)
-        uses: docker/build-push-action@5176d81f87c23d6fc96624dfdbcd9f3830bbe445 # v6.5.0
-        with:
-          context: .
-          build-args: |
-            TOKEN=${{ secrets.PULL_TOKEN }}
-          file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
-          no-cache: true
-          push: true
-          tags: |
-            quay.io/testnetworkfunction/oct:latest
       
       - name: Authenticate against Quay.io (redhat-best-practices-for-k8s)
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
@@ -73,6 +51,57 @@ jobs:
           push: true
           tags: |
             quay.io/redhat-best-practices-for-k8s/oct:latest
+
+      - name: If failed to create the image, send alert msg to dev team.
+        if: ${{ failure() }}
+        uses: ./.github/actions/slack-webhook-sender
+        with:
+          message: 'Failed to create official latest OCT image. Please check the logs.'
+          slack_webhook: '${{ secrets.SLACK_ALERT_WEBHOOK_URL }}'
+
+  recreate-oct-container-image-legacy:
+    name: Create new OCT container image (Legacy)
+    runs-on: ubuntu-22.04
+    env:
+      SHELL: /bin/bash
+
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          ref: main
+          token: ${{ secrets.PULL_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.6.1
+
+      - name: Run endpoint verification script
+        run: |
+          ./scripts/curl-endpoints.sh
+
+      - name: Authenticate against Quay.io (testnetworkfunction)
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: quay.io
+          # Use a Robot Account to authenticate against Quay.io
+          # https://docs.quay.io/glossary/robot-accounts.html
+          username: ${{ secrets.QUAY_ROBOT_USER }}
+          password: ${{ secrets.QUAY_ROBOT_TOKEN }}
+
+      - name: Build and push the latest images for multi-arch (Legacy)
+        uses: docker/build-push-action@5176d81f87c23d6fc96624dfdbcd9f3830bbe445 # v6.5.0
+        with:
+          context: .
+          build-args: |
+            TOKEN=${{ secrets.PULL_TOKEN }}
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          no-cache: true
+          push: true
+          tags: |
+            quay.io/testnetworkfunction/oct:latest
 
       - name: If failed to create the image, send alert msg to dev team.
         if: ${{ failure() }}
