@@ -51,6 +51,7 @@ jobs:
           push: true
           tags: |
             quay.io/testnetworkfunction/oct:latest
+            quay.io/redhat-best-practices-for-k8s/oct:latest
 
 
       - name: If failed to create the image, send alert msg to dev team.

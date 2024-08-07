@@ -21,7 +21,7 @@ The OCT container image will help here, as it's updated four times a day. The wo
 # Usage
 
 TNF's fetch CLI tool code was copied here, so the syntax is the same, but it's hidden to the user, as it only needs to provide the output folder where the DB will be copied. Two things can be done with the container: (1) getting the current db stored in the container or (2) run the container app to parse the online catalog to dump the latest version.
-1. Create local container image or download the latest container image from quay.io/testnetworkfunction/oct:latest
+1. Create local container image or download the latest container image from quay.io/redhat-best-practices-for-k8s/oct:latest
     - To create a local container image from a local checkout folder, use this docker command:
       ```
       docker build -t quay.io/greyerof/oct_local:test --build-arg OCT_LOCAL_FOLDER=. --no-cache -f Dockerfile.local .
