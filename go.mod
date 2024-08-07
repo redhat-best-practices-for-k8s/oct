@@ -1,4 +1,4 @@
-module github.com/test-network-function/oct
+module github.com/redhat-best-practices-for-k8s/oct
 
 go 1.22.5
 

@@ -8,9 +8,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/redhat-best-practices-for-k8s/oct/pkg/certdb/offlinecheck"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/test-network-function/oct/pkg/certdb/offlinecheck"
 	"gopkg.in/yaml.v3"
 )
 

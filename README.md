@@ -1,8 +1,8 @@
 # oct - Offline Catalog Tool for Red Hat's certified containerized artifacts
-OCT is a containerized application that retrieves the latest certified artifacts (operators, containers and helm charts) from the [Red Hat's online catalog](https://catalog.redhat.com/api/containers/v1/ui/) to be used by RH's certification tools like [TNF](https://github.com/test-network-function/cnf-certification-test) or similar.
+OCT is a containerized application that retrieves the latest certified artifacts (operators, containers and helm charts) from the [Red Hat's online catalog](https://catalog.redhat.com/api/containers/v1/ui/) to be used by RH's certification tools like [TNF](https://github.com/redhat-best-practices-for-k8s/certsuite) or similar.
 
 # Important
-This is a Work in Progress PoC/demo project, not a complete/GA nor a ready to use tool. Most of the code was copied from the [TNF repo](https://github.com/test-network-function/cnf-certification-test) in order to get a running code quickly.
+This is a Work in Progress PoC/demo project, not a complete/GA nor a ready to use tool. Most of the code was copied from the [TNF repo](https://github.com/redhat-best-practices-for-k8s/certsuite) in order to get a running code quickly.
 
 # Motivation
 ## Completely disconnected environments issue
@@ -89,7 +89,7 @@ TNF's fetch CLI tool code was copied here, so the syntax is the same, but it's h
       ```
 
 # How it works
-The `oct` container has a script [run.sh](https://github.com/test-network-function/oct/blob/main/scripts/run.sh) that will run the TNF's `fetch` command. If it succeeds, the db files are copied into the container's `/tmp/dump` folder. The `OCT_DUMP_ONLY` env var is used to bypass the call to `fetch` so the current content of the container's db is copied into /tmp/dump.
+The `oct` container has a script [run.sh](https://github.com/redhat-best-practices-for-k8s/oct/blob/main/scripts/run.sh) that will run the TNF's `fetch` command. If it succeeds, the db files are copied into the container's `/tmp/dump` folder. The `OCT_DUMP_ONLY` env var is used to bypass the call to `fetch` so the current content of the container's db is copied into /tmp/dump.
 
 The `fetch` tool was updated in this repo to retrieve the operator and container pages in a concurrent way, using a go routine for each http get. I did this modification to speed up the dev tests, as the original `fetch` implementation to the the sequantial retrieval of catalog pages was too slow (RH's online catalog takes a lot of time for each response). Do not pay too much attention to the current implementation, as the original `fetch` tool's code was copied some weeks ago, and it was modified later by some PRs in the TNF's repo.
 # Issues/Caveats/Warnings
@@ -101,6 +101,6 @@ The current TNF's `fetch` tool (used in `oct`) works like this:
 3. The current workflow to create a new `oct` container has two issues:
    - The catalog API to get the certified containers is not working quite well lately, so the workflow fails too many times.
    - The workflow uses the `fetch`tool directly, but the repo's db index is empty, so it will always create a new container, no matter if it contains exactly the same files as the latest one. This can easily be solved by improving the workflow to dump the latest container's db and comparing it with the new one obtained by the `fetch` tool. Whatever solution is implemented, it should avoid uploading the db files into this repo.
-4. The DB format of the `oct` tool is coupled to the one that TNF expects, where it should be the other way around (TNF depending on oct's repo) or both repos importing a third repo with the API/scheme only (as TNF does with the [claim file format](https://github.com/test-network-function/test-network-function-claim)).
+4. The DB format of the `oct` tool is coupled to the one that TNF expects, where it should be the other way around (TNF depending on oct's repo) or both repos importing a third repo with the API/scheme only (as TNF does with the [claim file format](https://github.com/redhat-best-practices-for-k8s/certsuite-claim)).
 
 In my opinion, as these certification processes have begun to play important roles in the Red Hat's Ecosystem, this kind of tools shouldn't be needed, as the RH's online catalog could easily provide (a) its own container with this information or (b) a way to download a db.tar.gz with it.

@@ -4,7 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/test-network-function/oct/cmd/tnf/fetch"
+	"github.com/redhat-best-practices-for-k8s/oct/cmd/tnf/fetch"
 )
 
 var (

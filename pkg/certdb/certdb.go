@@ -3,9 +3,9 @@ package certdb
 import (
 	"fmt"
 
+	"github.com/redhat-best-practices-for-k8s/oct/pkg/certdb/offlinecheck"
+	"github.com/redhat-best-practices-for-k8s/oct/pkg/certdb/onlinecheck"
 	"github.com/sirupsen/logrus"
-	"github.com/test-network-function/oct/pkg/certdb/offlinecheck"
-	"github.com/test-network-function/oct/pkg/certdb/onlinecheck"
 	"helm.sh/helm/v3/pkg/release"
 )
 

@@ -18,8 +18,8 @@ package onlinecheck_test
 import (
 	"testing"
 
+	"github.com/redhat-best-practices-for-k8s/oct/pkg/certdb/onlinecheck"
 	"github.com/stretchr/testify/assert"
-	"github.com/test-network-function/oct/pkg/certdb/onlinecheck"
 )
 
 func TestIsContainerCertified(t *testing.T) {
