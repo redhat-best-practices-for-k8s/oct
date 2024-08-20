@@ -25,7 +25,7 @@ GO_PACKAGES=$(shell go list ./... | grep -v vendor)
 	vet
 
 OCT_TOOL_NAME=oct
-GOLANGCI_VERSION=v1.59.1
+GOLANGCI_VERSION=v1.60.1
 
 # Run the unit tests and build all binaries
 build:
