@@ -255,6 +255,7 @@ func getOperatorCatalog(data *CertifiedCatalog) error {
 		}
 	}
 
+	//nolint:gosec
 	data.Operators = int(total)
 
 	log.Info("Time to process all the operators: ", time.Since(start))

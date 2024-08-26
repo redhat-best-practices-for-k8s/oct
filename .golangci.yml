@@ -4,8 +4,6 @@ linters-settings:
   funlen:
     lines: 60
     statements: 45
-  gci:
-    local-prefixes: github.com/golangci/golangci-lint
   goconst:
     min-len: 4
     min-occurrences: 2
@@ -28,7 +26,6 @@ linters-settings:
         # do not include the "operation" and "assign"
         checks: argument,case,condition,return
   govet:
-    check-shadowing: true
     settings:
       printf:
         funcs:
@@ -54,7 +51,7 @@ linters:
     - dogsled
     - errcheck
     - exhaustive
-    - exportloopref
+    - copyloopvar
     - funlen
     - goconst
     - gocritic
@@ -94,7 +91,7 @@ linters:
   # - nestif
   # - noctx
   # - prealloc
-  # - exportloopref
+  # - copyloopvar
   # - structcheck
   # - testpackage
   # - wsl
