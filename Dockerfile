@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/ubi:9.4-1181.1724035907@sha256:9e6a89ab2a9224712391c77fab2ab01009e387aff42854826427aaf18b98b1ff AS builder
+FROM registry.access.redhat.com/ubi9/ubi:9.4-1214@sha256:9460515b85f2a75278f2043438583c1c377c44bf100178bb653a6c8658304ac7 AS builder
 ARG OCT_REPO=github.com/test-network-function/oct.git
 ARG TOKEN
 ENV OCT_FOLDER=/usr/oct
