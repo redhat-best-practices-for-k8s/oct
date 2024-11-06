@@ -219,25 +219,26 @@ func (validator OnlineValidator) IsOperatorCertified(csvName, ocpVersion, channe
 		fmt.Sprintf(certifiedOperatorsCatalogURL, csvName, filterCertifiedOperatorsOrg),
 		fmt.Sprintf(certifiedOperatorsCatalogURL, csvName, filterRedHatOperatorsOrg),
 	}
+	operatorIsCertified := false
 	for _, url := range catalogUrls {
 		log.Trace(url)
 		if responseData, err = validator.GetRequest(url); err != nil || len(responseData) == 0 {
-			return false
+			continue
 		}
 		operatorEntries := offlinecheck.OperatorCatalog{}
 		err = json.Unmarshal(responseData, &operatorEntries)
 		if err != nil {
 			log.Error("Cannot marshall binary data", err)
-			return false
+			continue
 		}
 		for _, operator := range operatorEntries.Data {
 			_, opVersion := offlinecheck.ExtractNameVersionFromName(operator.CsvName)
 			if (opVersion == operatorVersion) && (operator.OcpVersion == ocpVersion || ocpVersion == "") && operator.Channel == channel {
-				return true
+				operatorIsCertified = true
 			}
 		}
 	}
-	return false
+	return operatorIsCertified
 }
 
 func (validator OnlineValidator) IsHelmChartCertified(helm *release.Release, ourKubeVersion string) bool {
