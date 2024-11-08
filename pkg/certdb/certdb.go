@@ -11,7 +11,7 @@ import (
 
 type CertificationStatusValidator interface {
 	IsContainerCertified(registry, repository, tag, digest string) bool
-	IsOperatorCertified(csvName, ocpVersion, channel string) bool
+	IsOperatorCertified(csvName, ocpVersion string) bool
 	IsHelmChartCertified(helm *release.Release, ourKubeVersion string) bool
 }
 

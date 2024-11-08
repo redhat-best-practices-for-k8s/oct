@@ -113,10 +113,9 @@ func TestIsOperatorCertified(t *testing.T) {
 
 	name := "ibm-spectrum-scale-csi-operator.v2.0.0"
 	ocpversion := "4.6"
-	channel := "stable"
 
-	assert.True(t, validator.IsOperatorCertified(name, ocpversion, channel))
+	assert.True(t, validator.IsOperatorCertified(name, ocpversion))
 
 	name = "falcon-alpha"
-	assert.False(t, validator.IsOperatorCertified(name, ocpversion, channel))
+	assert.False(t, validator.IsOperatorCertified(name, ocpversion))
 }
