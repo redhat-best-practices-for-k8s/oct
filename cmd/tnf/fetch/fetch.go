@@ -226,6 +226,9 @@ func getOperatorCatalog(data *CertifiedCatalog) error {
 	}
 
 	log.Infof("Certified operators in the online catalog: %d, page size: %d", total, pageSize)
+	// convert data.Operators to uint to compare with total
+
+	//nolint:gosec
 	if total == uint(data.Operators) {
 		log.Info("No new certified operator found")
 		return nil
