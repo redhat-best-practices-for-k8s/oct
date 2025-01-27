@@ -46,7 +46,7 @@ jobs:
           build-args: |
             TOKEN=${{ secrets.PULL_TOKEN }}
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
           no-cache: true
           push: true
           tags: |
@@ -97,7 +97,7 @@ jobs:
           build-args: |
             TOKEN=${{ secrets.PULL_TOKEN }}
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
           no-cache: true
           push: true
           tags: |
