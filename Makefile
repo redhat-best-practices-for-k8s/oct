@@ -25,7 +25,6 @@ GO_PACKAGES=$(shell go list ./... | grep -v vendor)
 	vet
 
 OCT_TOOL_NAME=oct
-GOLANGCI_VERSION=v1.64.3
 
 # Run the unit tests and build all binaries
 build:
@@ -63,10 +62,6 @@ update-certified-catalog:
 update-deps:
 	go mod tidy && \
 	go mod vendor
-
-# Install golangci-lint	
-install-lint:
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ${GO_PATH}/bin ${GOLANGCI_VERSION}
 
 vet:
 	go vet ${GO_PACKAGES}
