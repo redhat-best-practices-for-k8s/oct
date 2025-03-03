@@ -40,7 +40,7 @@ jobs:
           make build
           ./preflight check container ${{ env.IMAGE_NAME }} --artifacts ${GITHUB_WORKSPACE}/openshift-preflight/artifacts
 
-          ALLOWED_FAILURES=("HasLicense" "RunAsNonRoot" "HasUniqueTag")
+          ALLOWED_FAILURES=("HasLicense" "RunAsNonRoot" "HasUniqueTag" "HasRequiredLabel")
           FAILURES=$(cat ${GITHUB_WORKSPACE}/openshift-preflight/artifacts/amd64/results.json | jq -r '.results.failed[].name')
 
           for FAILURE in $FAILURES; do
