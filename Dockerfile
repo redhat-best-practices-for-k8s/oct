@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM registry.access.redhat.com/ubi9/ubi:9.5@sha256:d342aa80781bf41c4c73485c41d8f1e2dbc40ee491633d9cafe787c361dd44ff AS builder
+FROM --platform=$BUILDPLATFORM registry.access.redhat.com/ubi9/ubi:9.5@sha256:b88227436597e960f70db8eadcaf18ffa5b6d1a615888f709dcae3fba1540c61 AS builder
 ARG OCT_REPO=github.com/test-network-function/oct.git
 ARG TOKEN
 ENV OCT_FOLDER=/usr/oct
@@ -47,7 +47,7 @@ RUN ./oct fetch --operator --container --helm && \
 
 # Copy the oct folder to a new minimal flattened image to reduce size.
 # It should also hide the pull token.
-FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:14f14e03d68f7fd5f2b18a13478b6b127c341b346c86b6e0b886ed2b7573b8e0
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:30bbd445046a3a63f5f5557a3c67dee74e3c8e7855eb0347630b020f3689823f
 ENV OCT_FOLDER=/usr/oct
 
 COPY --from=builder ${OCT_FOLDER} ${OCT_FOLDER}
