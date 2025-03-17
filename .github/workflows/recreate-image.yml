@@ -9,6 +9,7 @@ on:
 
 jobs:
   recreate-oct-container-image:
+    if: github.repository_owner == 'redhat-best-practices-for-k8s'
     name: Create new OCT container image
     runs-on: ubuntu-22.04
     env:
