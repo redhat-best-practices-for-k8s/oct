@@ -33,9 +33,8 @@ jobs:
         run: make build-oct
 
       - name: Golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v1.64
           args: --timeout 10m0s
 
       - name: make vet
