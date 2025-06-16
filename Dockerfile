@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM registry.access.redhat.com/ubi9/ubi:9.6@sha256:304b50df1ea4db9706d8a30f4bbf26f582936ebc80c7e075c72ff2af99292a54 AS builder
+FROM --platform=$BUILDPLATFORM registry.access.redhat.com/ubi9/ubi:9.6@sha256:861e833044a903f689ecfa404424494a7e387ab39cf7949c54843285d13a9774 AS builder
 ARG OCT_REPO=github.com/test-network-function/oct.git
 ARG TOKEN
 ENV OCT_FOLDER=/usr/oct
