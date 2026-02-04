@@ -1,6 +1,14 @@
 # oct - Offline Catalog Tool for Red Hat's certified containerized artifacts
 OCT is a containerized application that retrieves the latest certified artifacts (operators, containers and helm charts) from the [Red Hat's online catalog](https://catalog.redhat.com/api/containers/v1/ui/) to be used by RH's certification tools like [TNF](https://github.com/redhat-best-practices-for-k8s/certsuite) or similar.
 
+# Why Use OCT
+
+- **Fresh certification data** — The OCT container is updated 4x daily, while certsuite releases may be months apart with increasingly stale embedded catalogs
+- **Disconnected environment support** — Enables certification testing in air-gapped or offline environments where Red Hat's online catalog is unreachable
+- **Avoid false test failures** — Prevents `affiliated-certification` test failures caused by newly certified artifacts missing from outdated embedded catalogs
+- **Simple workflow** — Just pull the container, run it in dump-only mode, and point certsuite to the extracted database files
+- **Complete coverage** — Includes certified operators, containers, and Helm charts from Red Hat's catalog
+
 # Important
 This is a Work in Progress PoC/demo project, not a complete/GA nor a ready to use tool. Most of the code was copied from the [TNF repo](https://github.com/redhat-best-practices-for-k8s/certsuite) in order to get a running code quickly.
 
