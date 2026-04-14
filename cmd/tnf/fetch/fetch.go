@@ -14,22 +14,36 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var (
-	// containersCatalogSizeURL = "https://catalog.redhat.com/api/containers/v1/images?filter=certified==true&page=0&include=total,page_size"
-	containersCatalogPageURL = "https://catalog.redhat.com/api/containers/v1/images?filter=certified==true&page_size=%d&page=%d&include=data.repositories,data.image_id,data.architecture,data.repositories.manifest_list_digest"
-	operatorsCatalogSizeURL  = "https://catalog.redhat.com/api/containers/v1/operators/bundles?filter=organization==certified-operators"
-	operatorsCatalogPageURL  = "https://catalog.redhat.com/api/containers/v1/operators/bundles?filter=organization==certified-operators&page_size=%d&page=%d"
-	helmCatalogURL           = "https://charts.openshift.io/index.yaml"
-	containersRelativePath   = "%s/cmd/tnf/fetch/data/containers/containers.db"
-	operatorsRelativePath    = "%s/cmd/tnf/fetch/data/operators/"
-	helmRelativePath         = "%s/cmd/tnf/fetch/data/helm/helm.db"
-	certifiedcatalogdata     = "%s/cmd/tnf/fetch/data/archive.json"
-	operatorFileFormat       = "operator_catalog_page_%d_%d.db"
+const (
+	containersCatalogPageSize = 500
+
+	containersGraphQLIncludeFilter = "data._id," +
+		"data.repositories.registry," +
+		"data.repositories.tags.name," +
+		"data.image_id," +
+		"data.architecture," +
+		"data.repositories.manifest_list_digest"
+
+	operatorsGraphQLIncludeFilter = "page," +
+		"page_size," +
+		"total," +
+		"data.csv_name," +
+		"data.ocp_version," +
+		"data.channel_name"
 )
 
-const (
-	// Pyxies guarantees that 100 is a time-proof value. Hardcoding it is a bad idea, though.
-	defaultContainersCatalogPageSize = 100
+var (
+	// containersCatalogSizeURL = "https://catalog.redhat.com/api/containers/v1/images?filter=certified==true&page=0&include=total,page_size"
+	containersCatalogPageURL = "https://catalog.redhat.com/api/containers/v1/images?filter=certified==true&page_size=%d&page=%d&include=" + containersGraphQLIncludeFilter
+	operatorsCatalogSizeURL  = "https://catalog.redhat.com/api/containers/v1/operators/bundles?filter=organization==certified-operators"
+	// Pyxis include lists only fields consumed when loading operator pages (offlinecheck.OperatorCatalog / OperatorData).
+	operatorsCatalogPageURL = "https://catalog.redhat.com/api/containers/v1/operators/bundles?filter=organization==certified-operators&page_size=%d&page=%d&include=" + operatorsGraphQLIncludeFilter
+	helmCatalogURL          = "https://charts.openshift.io/index.yaml"
+	containersRelativePath  = "%s/cmd/tnf/fetch/data/containers/containers.db"
+	operatorsRelativePath   = "%s/cmd/tnf/fetch/data/operators/"
+	helmRelativePath        = "%s/cmd/tnf/fetch/data/helm/helm.db"
+	certifiedcatalogdata    = "%s/cmd/tnf/fetch/data/archive.json"
+	operatorFileFormat      = "operator_catalog_page_%d_%d.db"
 )
 
 var (
@@ -179,25 +193,13 @@ func getOperatorCatalogSize() (size, pagesize uint, err error) {
 	return aCatalog.Total, aCatalog.PageSize, nil
 }
 
-func getOperatorCatalogPage(page, size uint, isLastPage bool) error {
-	const (
-		excludeFilter            = "&exclude=page,total,page_size"
-		excludeFilterForLastPage = "&exclude=page,page_size"
-	)
-
+func getOperatorCatalogPage(page, size uint) error {
 	path, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
 	url := fmt.Sprintf(operatorsCatalogPageURL, size, page)
-	// Add "total" count only in the last page.
-	if isLastPage {
-		url += excludeFilterForLastPage
-	} else {
-		url += excludeFilter
-	}
-
 	log.Infof("Getting operators catalog page %d, url: %s", page, url)
 
 	body, err := getHTTPBody(url)
@@ -245,14 +247,13 @@ func getOperatorCatalog(data *CertifiedCatalog) error {
 		pages, pageSize, remaining)
 
 	for page := uint(0); page < pages; page++ {
-		isLastPage := remaining == 0 && page == (pages-1)
-		err = getOperatorCatalogPage(page, pageSize, isLastPage)
+		err = getOperatorCatalogPage(page, pageSize)
 		if err != nil {
 			return fmt.Errorf("failed to get operators page %d (total %d)", page, total)
 		}
 	}
 	if remaining != 0 {
-		err = getOperatorCatalogPage(pages, remaining, true)
+		err = getOperatorCatalogPage(pages, remaining)
 		if err != nil {
 			return fmt.Errorf("failed to get remaining operators page %d (total %d)", pages, total)
 		}
@@ -266,25 +267,41 @@ func getOperatorCatalog(data *CertifiedCatalog) error {
 }
 
 func getContainerCatalogPage(page, size uint, db map[string]*offlinecheck.ContainerCatalogEntry) (entries int, err error) {
-	start := time.Now()
-
 	url := fmt.Sprintf(containersCatalogPageURL, size, page)
 	log.Infof("Getting containers catalog page %d, url: %s", page, url)
 
+	retryDelays := []time.Duration{30 * time.Second, 1 * time.Minute, 2 * time.Minute}
+
+	start := time.Now()
 	body, err := getHTTPBody(url)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get containers page %s: %w", url, err)
+	if err == nil {
+		log.Info("Time to fetch json body: ", time.Since(start))
+		entries, err = offlinecheck.LoadBinary(body, db)
+		return entries, err
 	}
 
-	log.Info("Time to fetch binary data: ", time.Since(start))
+	// Here, err is not nil, so let's start retrying
+	for i := 0; err != nil && i < len(retryDelays); i++ {
+		log.Warningf("Failed to get containers catalog page %d (attempt %d/%d), error: %v",
+			page, i+1, len(retryDelays)+1, err)
+		log.Infof("Retrying in %s...", retryDelays[i])
+		time.Sleep(retryDelays[i])
 
-	start = time.Now()
-	entries, err = offlinecheck.LoadBinary(body, db)
-	if err != nil {
-		return 0, fmt.Errorf("failed to load binary data: %w", err)
+		start = time.Now()
+		body, err = getHTTPBody(url)
+		if err != nil {
+			continue
+		}
+
+		log.Info("Time to fetch json body: ", time.Since(start))
+		entries, err = offlinecheck.LoadBinary(body, db)
 	}
 
-	log.Info("Time to load the data: ", time.Since(start))
+	// If retries failed, return an error
+	if err != nil {
+		return 0, fmt.Errorf("failed to get containers catalog page %d, url: %s: %w", page, url, err)
+	}
+
 	return entries, nil
 }
 
@@ -309,7 +326,7 @@ func serializeContainersDB(db map[string]*offlinecheck.ContainerCatalogEntry) er
 		return fmt.Errorf("failed to write into file %s: %w", filename, err)
 	}
 
-	log.Info("serialization time", time.Since(start))
+	log.Info("serialization time=", time.Since(start))
 	return nil
 }
 
@@ -322,11 +339,11 @@ func getContainerCatalog(data *CertifiedCatalog) error {
 		return fmt.Errorf("failed to remove containers db: %w", err)
 	}
 
-	log.Infof("Downloading pages of size %d entries.", defaultContainersCatalogPageSize)
+	log.Infof("Downloading containers catalog pages of size %d entries.", containersCatalogPageSize)
 
 	total := 0
 	for page := uint(0); ; page++ {
-		entries, pageError := getContainerCatalogPage(page, defaultContainersCatalogPageSize, db)
+		entries, pageError := getContainerCatalogPage(page, containersCatalogPageSize, db)
 		if pageError != nil {
 			return fmt.Errorf("failed to get containers page %d: %w", page, pageError)
 		}
@@ -335,7 +352,7 @@ func getContainerCatalog(data *CertifiedCatalog) error {
 		total += entries
 
 		// Last page?
-		if entries != defaultContainersCatalogPageSize {
+		if entries != containersCatalogPageSize {
 			break
 		}
 	}
@@ -348,7 +365,7 @@ func getContainerCatalog(data *CertifiedCatalog) error {
 
 	data.Containers = total
 
-	log.Infof("Certified containers in the online catalog: %d, page size: %d", total, defaultContainersCatalogPageSize)
+	log.Infof("Certified containers in the online catalog: %d, page size: %d", total, containersCatalogPageSize)
 	log.Info("Time to serialize all the container: ", time.Since(serializeStart))
 	log.Info("Time to process all the container: ", time.Since(start))
 

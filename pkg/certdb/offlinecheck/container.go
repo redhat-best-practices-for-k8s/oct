@@ -35,10 +35,9 @@ type Tag struct {
 	Name string `json:"name"`
 }
 type Repository struct {
-	Registry      string `json:"registry"`
-	Repository    string `json:"repository"`
-	Tags          []Tag  `json:"tags"`
-	PublishedDate string `json:"push_date"`
+	Registry   string `json:"registry"`
+	Repository string `json:"repository"`
+	Tags       []Tag  `json:"tags"`
 }
 
 type ContainerCatalogEntry struct {
