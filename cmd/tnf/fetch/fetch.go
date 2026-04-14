@@ -277,7 +277,7 @@ func getContainerCatalogPage(page, size uint, db map[string]*offlinecheck.Contai
 	if err == nil {
 		log.Info("Time to fetch json body: ", time.Since(start))
 		entries, err = offlinecheck.LoadBinary(body, db)
-		return entries, nil
+		return entries, err
 	}
 
 	// Here, err is not nil, so let's start retrying
