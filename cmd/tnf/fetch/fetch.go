@@ -277,14 +277,12 @@ func getContainerCatalogPage(page, size uint, db map[string]*offlinecheck.Contai
 	if err == nil {
 		log.Info("Time to fetch json body: ", time.Since(start))
 		entries, err = offlinecheck.LoadBinary(body, db)
-		return entries, err
 	}
 
 	// Here, err is not nil, so let's start retrying
 	for i := 0; err != nil && i < len(retryDelays); i++ {
-		log.Warningf("Failed to get containers catalog page %d (attempt %d/%d), error: %v",
-			page, i+1, len(retryDelays)+1, err)
-		log.Infof("Retrying in %s...", retryDelays[i])
+		log.Warningf("Failed to get containers catalog page %d, error: %v", page, err)
+		log.Infof("Retrying (attempt %d/%d) in %s...", i+1, len(retryDelays), retryDelays[i])
 		time.Sleep(retryDelays[i])
 
 		start = time.Now()
