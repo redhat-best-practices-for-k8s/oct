@@ -270,7 +270,7 @@ func getContainerCatalogPage(page, size uint, db map[string]*offlinecheck.Contai
 	url := fmt.Sprintf(containersCatalogPageURL, size, page)
 	log.Infof("Getting containers catalog page %d, url: %s", page, url)
 
-	retryDelays := []time.Duration{30 * time.Second, 1 * time.Minute, 2 * time.Minute}
+	retryDelays := []time.Duration{30 * time.Second, 1 * time.Minute, 2 * time.Minute, 5 * time.Minute}
 
 	start := time.Now()
 	body, err := getHTTPBody(url)
