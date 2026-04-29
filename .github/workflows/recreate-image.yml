@@ -1,9 +1,9 @@
 name: Recreate OCT image
 
 on:
-  # Triggers the workflow every day at 4am UTC
+  # Triggers the workflow every day at 1:17am UTC
   schedule:
-    - cron: "0 4 * * *"
+    - cron: "17 1 * * *"
 
   workflow_dispatch:
 
