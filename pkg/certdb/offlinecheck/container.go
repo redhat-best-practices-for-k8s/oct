@@ -42,16 +42,14 @@ type Repository struct {
 
 type ContainerCatalogEntry struct {
 	ID                string       `json:"_id"`
+	CreationDate      string       `json:"creation_date"`
 	Architecture      string       `json:"architecture"`
 	Certified         bool         `json:"certified"`
 	DockerImageDigest string       `json:"image_id"`
 	Repositories      []Repository `json:"repositories"`
 }
 type ContainerPageCatalog struct {
-	Page     uint                    `json:"page"`
-	PageSize uint                    `json:"page_size"`
-	Total    uint                    `json:"total"`
-	Data     []ContainerCatalogEntry `json:"data"`
+	Data []ContainerCatalogEntry `json:"data"`
 }
 
 func loadContainersCatalog(offlineDBPath string) error {
