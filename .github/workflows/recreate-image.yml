@@ -11,8 +11,8 @@ permissions: read-all
 
 env:
   IMAGE_TAG: test
-  IMAGE_NAME: quay.io/redhat-best-practices-for-k8s/oct:${{ env.IMAGE_TAG }}
-  IMAGE_NAME_LEGACY: quay.io/testnetworkfunction/oct:${{ env.IMAGE_TAG }}
+  IMAGE_NAME: quay.io/redhat-best-practices-for-k8s/oct:${{ IMAGE_TAG }}
+  IMAGE_NAME_LEGACY: quay.io/testnetworkfunction/oct:${{ IMAGE_TAG }}
 
 jobs:
   recreate-oct-container-image:
