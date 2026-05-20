@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -15,9 +16,10 @@ import (
 )
 
 const (
-	containersCatalogPageSize = 500
+	httpClientTimeout = 2 * time.Minute
 
 	containersGraphQLIncludeFilter = "data._id," +
+		"data.creation_date," +
 		"data.repositories.registry," +
 		"data.repositories.tags.name," +
 		"data.image_id," +
@@ -33,9 +35,8 @@ const (
 )
 
 var (
-	// containersCatalogSizeURL = "https://catalog.redhat.com/api/containers/v1/images?filter=certified==true&page=0&include=total,page_size"
-	containersCatalogPageURL = "https://catalog.redhat.com/api/containers/v1/images?filter=certified==true&page_size=%d&page=%d&include=" + containersGraphQLIncludeFilter
-	operatorsCatalogSizeURL  = "https://catalog.redhat.com/api/containers/v1/operators/bundles?filter=organization==certified-operators"
+	containersCatalogURL    = "https://catalog.redhat.com/api/containers/v1/images"
+	operatorsCatalogSizeURL = "https://catalog.redhat.com/api/containers/v1/operators/bundles?filter=organization==certified-operators"
 	// Pyxis include lists only fields consumed when loading operator pages (offlinecheck.OperatorCatalog / OperatorData).
 	operatorsCatalogPageURL = "https://catalog.redhat.com/api/containers/v1/operators/bundles?filter=organization==certified-operators&page_size=%d&page=%d&include=" + operatorsGraphQLIncludeFilter
 	helmCatalogURL          = "https://charts.openshift.io/index.yaml"
@@ -55,6 +56,7 @@ var (
 	operatorFlag  = "operator"
 	containerFlag = "container"
 	helmFlag      = "helm"
+	sinceFlag     = "since"
 )
 
 type CertifiedCatalog struct {
@@ -70,18 +72,53 @@ func NewCommand() *cobra.Command {
 		"if specified, the certified containers DB will be updated")
 	command.PersistentFlags().BoolP(helmFlag, "m", false,
 		"if specified, the helm file will be updated")
+	command.PersistentFlags().StringP(sinceFlag, "s", "",
+		"only fetch entries newer than this value (Go duration like 1h/30m or RFC3339 timestamp)")
 	return command
+}
+
+func parseSinceFlag(raw string) (time.Time, error) {
+	if raw == "" {
+		return time.Time{}, nil
+	}
+
+	if d, err := time.ParseDuration(raw); err == nil {
+		return time.Now().UTC().Add(-d), nil
+	}
+
+	t, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid --since value %q: must be a Go duration (e.g. 1h, 30m) or RFC3339 timestamp", raw)
+	}
+
+	return t.UTC(), nil
 }
 
 // RunCommand execute the fetch subcommands
 func RunCommand(cmd *cobra.Command, _ []string) error {
 	data := getCertifiedCatalogOnDisk()
 	log.Infof("Current offline artifacts: %+v", data)
+
+	sinceRaw, err := cmd.PersistentFlags().GetString(sinceFlag)
+	if err != nil {
+		return fmt.Errorf("failed to get --since flag: %w", err)
+	}
+
+	sinceTime, err := parseSinceFlag(sinceRaw)
+	if err != nil {
+		return fmt.Errorf("failed to parse --since flag: %w", err)
+	}
+
+	hasSince := !sinceTime.IsZero()
+
 	b, err := cmd.PersistentFlags().GetBool(operatorFlag)
 	if err != nil {
 		log.Error("Can't process the flag, ", operatorFlag)
 		return err
 	} else if b {
+		if hasSince {
+			log.Warning("--since is not yet implemented for operators, ignoring")
+		}
 		err = getOperatorCatalog(&data)
 		if err != nil {
 			log.Fatalf("fetching operators failed: %v", err)
@@ -91,7 +128,7 @@ func RunCommand(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	} else if b {
-		err = getContainerCatalog(&data)
+		err = getContainerCatalog(&data, sinceTime)
 		if err != nil {
 			log.Fatalf("fetching containers failed: %v", err)
 		}
@@ -100,6 +137,9 @@ func RunCommand(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	} else if b {
+		if hasSince {
+			log.Warning("--since is not yet implemented for helm charts, ignoring")
+		}
 		err = getHelmCatalog()
 		if err != nil {
 			log.Fatalf("fetching helm charts failed: %v", err)
@@ -112,17 +152,17 @@ func RunCommand(cmd *cobra.Command, _ []string) error {
 }
 
 // getHTTPBody helper function to get binary data from URL
-func getHTTPBody(url string) ([]uint8, error) {
+func getHTTPBody(requestURL string) ([]uint8, error) {
 	//nolint:gosec
-	resp, err := http.Get(url)
+	resp, err := http.Get(requestURL)
 	if err != nil {
-		return nil, fmt.Errorf("http request %s failed with error: %w", url, err)
+		return nil, fmt.Errorf("http request %s failed with error: %w", requestURL, err)
 	}
 
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error reading body from %s: %w, body: %s", url, err, string(body))
+		return nil, fmt.Errorf("error reading body from %s: %w, body: %s", requestURL, err, string(body))
 	}
 	return body, nil
 }
@@ -199,10 +239,10 @@ func getOperatorCatalogPage(page, size uint) error {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
-	url := fmt.Sprintf(operatorsCatalogPageURL, size, page)
-	log.Infof("Getting operators catalog page %d, url: %s", page, url)
+	requestURL := fmt.Sprintf(operatorsCatalogPageURL, size, page)
+	log.Infof("Getting operators catalog page %d, url: %s", page, requestURL)
 
-	body, err := getHTTPBody(url)
+	body, err := getHTTPBody(requestURL)
 	if err != nil {
 		return err
 	}
@@ -264,41 +304,61 @@ func getOperatorCatalog(data *CertifiedCatalog) error {
 	return nil
 }
 
-func getContainerCatalogPage(page, size uint, db map[string]*offlinecheck.ContainerCatalogEntry) (entries int, err error) {
-	url := fmt.Sprintf(containersCatalogPageURL, size, page)
-	log.Infof("Getting containers catalog page %d, url: %s", page, url)
-
-	retryDelays := []time.Duration{30 * time.Second, 1 * time.Minute, 2 * time.Minute, 5 * time.Minute}
-
-	start := time.Now()
-	body, err := getHTTPBody(url)
-	if err == nil {
-		log.Info("Time to fetch json body: ", time.Since(start))
-		entries, err = offlinecheck.LoadBinary(body, db)
+func fetchContainerPage(client *http.Client, cursor string, sinceTime time.Time) ([]offlinecheck.ContainerCatalogEntry, error) {
+	filter := fmt.Sprintf("isv_pid!=null and creation_date<%s and certified==true", cursor)
+	if !sinceTime.IsZero() {
+		filter += fmt.Sprintf(" and creation_date>=%s", sinceTime.Format(time.RFC3339))
 	}
 
-	// Here, err is not nil, so let's start retrying
-	for i := 0; err != nil && i < len(retryDelays); i++ {
-		log.Warningf("Failed to get containers catalog page %d, error: %v", page, err)
-		log.Infof("Retrying (attempt %d/%d) in %s...", i+1, len(retryDelays), retryDelays[i])
-		time.Sleep(retryDelays[i])
+	params := url.Values{}
+	params.Set("filter", filter)
+	params.Set("include", containersGraphQLIncludeFilter)
+	params.Set("sort_by", "creation_date[desc]")
 
-		start = time.Now()
-		body, err = getHTTPBody(url)
+	reqURL := containersCatalogURL + "?" + params.Encode()
+	log.Infof("Request URL: %s", reqURL)
+
+	start := time.Now()
+	resp, err := client.Get(reqURL)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respTime := time.Since(start)
+	log.Infof("Time to fetch json body: %d seconds (%d milliseconds)", int(respTime.Seconds()), int(respTime.Milliseconds()))
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var result offlinecheck.ContainerPageCatalog
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return result.Data, nil
+}
+
+func getContainerCatalogPage(client *http.Client, cursor string, sinceTime time.Time) ([]offlinecheck.ContainerCatalogEntry, error) {
+	retryDelays := []time.Duration{0, 30 * time.Second, 1 * time.Minute, 2 * time.Minute}
+
+	var lastErr error
+	for attempt, delay := range retryDelays {
+		if delay > 0 {
+			log.Warningf("Attempt %d failed: %v. Retrying in %s...", attempt, lastErr, delay)
+			time.Sleep(delay)
+		}
+
+		entries, err := fetchContainerPage(client, cursor, sinceTime)
 		if err != nil {
+			lastErr = err
 			continue
 		}
 
-		log.Info("Time to fetch json body: ", time.Since(start))
-		entries, err = offlinecheck.LoadBinary(body, db)
+		return entries, nil
 	}
 
-	// If retries failed, return an error
-	if err != nil {
-		return 0, fmt.Errorf("failed to get containers catalog page %d, url: %s: %w", page, url, err)
-	}
-
-	return entries, nil
+	return nil, fmt.Errorf("all %d retry attempts exhausted: %w", len(retryDelays), lastErr)
 }
 
 func serializeContainersDB(db map[string]*offlinecheck.ContainerCatalogEntry) error {
@@ -326,44 +386,106 @@ func serializeContainersDB(db map[string]*offlinecheck.ContainerCatalogEntry) er
 	return nil
 }
 
-func getContainerCatalog(data *CertifiedCatalog) error {
+func parseCreationDate(raw string) (time.Time, error) {
+	if t, err := time.Parse(time.RFC3339, raw); err == nil {
+		return t, nil
+	}
+
+	return time.Parse("2006-01-02T15:04:05.000000+00:00", raw)
+}
+
+func processContainerEntries(
+	entries []offlinecheck.ContainerCatalogEntry,
+	db map[string]*offlinecheck.ContainerCatalogEntry,
+	sinceTime time.Time,
+) (int, error) {
+	newCount := 0
+	for i := range entries {
+		if !sinceTime.IsZero() {
+			ct, err := parseCreationDate(entries[i].CreationDate)
+			if err != nil {
+				return newCount, fmt.Errorf("failed to parse creation_date %q: %w", entries[i].CreationDate, err)
+			}
+
+			if ct.Before(sinceTime) {
+				log.Infof("Entry %s has creation_date %s before --since cutoff, stopping.", entries[i].ID, entries[i].CreationDate)
+				return newCount, nil
+			}
+		}
+
+		if _, exists := db[entries[i].DockerImageDigest]; !exists {
+			if entries[i].DockerImageDigest == "" {
+				log.Warningf("Entry %s has no docker image digest, skipping it. Entry: %+v", entries[i].ID, entries[i])
+				continue
+			}
+
+			// The certified field was not included in the initial Pyxis response, so we need to set it to true
+			// Not strictly necessary for offline checks, but let's set it to true for consistency.
+			entries[i].Certified = true
+
+			db[entries[i].DockerImageDigest] = &entries[i]
+			newCount++
+		}
+	}
+
+	return newCount, nil
+}
+
+func getContainerCatalog(data *CertifiedCatalog, sinceTime time.Time) error {
 	start := time.Now()
 	db := make(map[string]*offlinecheck.ContainerCatalogEntry)
 
-	err := removeContainersDB()
-	if err != nil {
+	if err := removeContainersDB(); err != nil {
 		return fmt.Errorf("failed to remove containers db: %w", err)
 	}
 
-	log.Infof("Downloading containers catalog pages of size %d entries.", containersCatalogPageSize)
-
+	client := &http.Client{Timeout: httpClientTimeout}
+	cursor := time.Now().UTC().Format(time.RFC3339)
 	total := 0
-	for page := uint(0); ; page++ {
-		entries, pageError := getContainerCatalogPage(page, containersCatalogPageSize, db)
-		if pageError != nil {
-			return fmt.Errorf("failed to get containers page %d: %w", page, pageError)
+
+	if !sinceTime.IsZero() {
+		log.Infof("Downloading containers catalog (since %s) using cursor-based pagination.", sinceTime.Format(time.RFC3339))
+	} else {
+		log.Info("Downloading containers catalog using cursor-based pagination.")
+	}
+
+	// We'll query using the pyxis index based on isv_pid and creation_date fields (desc order).
+	// Pagination works by using the creation_date of the oldest entry in each response as the
+	// cursor for the next request, continuing until no more entries are returned or the date
+	// falls before the --since cutoff (if provided).
+	for page := 0; ; page++ {
+		log.Infof("Getting containers catalog page %d (cursor: %s)", page, cursor)
+
+		entries, err := getContainerCatalogPage(client, cursor, sinceTime)
+		if err != nil {
+			return fmt.Errorf("failed to get containers page %d: %w", page, err)
 		}
 
-		log.Infof("Container page %d downloaded. Entries: %d", page, entries)
-		total += entries
+		if len(entries) == 0 {
+			break
+		}
 
-		// Last page?
-		if entries != containersCatalogPageSize {
+		newCount, err := processContainerEntries(entries, db, sinceTime)
+		if err != nil {
+			return err
+		}
+
+		total += newCount
+		cursor = entries[len(entries)-1].CreationDate
+		log.Infof("Container page %d: %d entries (%d new, total: %d)", page, len(entries), newCount, total)
+
+		if newCount == 0 {
 			break
 		}
 	}
 
-	serializeStart := time.Now()
-	err = serializeContainersDB(db)
-	if err != nil {
+	if err := serializeContainersDB(db); err != nil {
 		return fmt.Errorf("failed to serialize containers db: %w", err)
 	}
 
 	data.Containers = total
-
-	log.Infof("Certified containers in the online catalog: %d, page size: %d", total, containersCatalogPageSize)
-	log.Info("Time to serialize all the container: ", time.Since(serializeStart))
-	log.Info("Time to process all the container: ", time.Since(start))
+	log.Infof("Certified containers in the online catalog: %d", total)
+	log.Info("Time to process all the containers: ", time.Since(start))
 
 	return nil
 }
