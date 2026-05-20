@@ -11,8 +11,8 @@ permissions: read-all
 
 env:
   IMAGE_TAG: test
-  IMAGE_NAME: quay.io/redhat-best-practices-for-k8s/oct:${{ IMAGE_TAG }}
-  IMAGE_NAME_LEGACY: quay.io/testnetworkfunction/oct:${{ IMAGE_TAG }}
+  IMAGE_NAME: quay.io/redhat-best-practices-for-k8s/oct
+  IMAGE_NAME_LEGACY: quay.io/testnetworkfunction/oct
 
 jobs:
   recreate-oct-container-image:
@@ -58,7 +58,7 @@ jobs:
           no-cache: true
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
       - name: If failed to create the image, send alert msg to dev team.
         if: ${{ failure() }}
@@ -109,7 +109,7 @@ jobs:
           no-cache: true
           push: true
           tags: |
-            ${{ env.IMAGE_NAME_LEGACY }}
+            ${{ env.IMAGE_NAME_LEGACY }}:${{ env.IMAGE_TAG }}
 
       - name: If failed to create the image, send alert msg to dev team.
         if: ${{ failure() }}
