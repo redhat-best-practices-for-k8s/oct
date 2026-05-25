@@ -21,10 +21,11 @@ const (
 	containersGraphQLIncludeFilter = "data._id," +
 		"data.creation_date," +
 		"data.repositories.registry," +
+		"data.repositories.repository," +
+		"data.repositories.manifest_list_digest," +
 		"data.repositories.tags.name," +
 		"data.image_id," +
-		"data.architecture," +
-		"data.repositories.manifest_list_digest"
+		"data.architecture"
 
 	operatorsGraphQLIncludeFilter = "page," +
 		"page_size," +
