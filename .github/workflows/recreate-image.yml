@@ -10,7 +10,7 @@ on:
 permissions: read-all
 
 env:
-  IMAGE_TAG: test
+  IMAGE_TAG: latest
   IMAGE_NAME: quay.io/redhat-best-practices-for-k8s/oct
   IMAGE_NAME_LEGACY: quay.io/testnetworkfunction/oct
 
