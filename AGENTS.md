@@ -173,7 +173,7 @@ data/
 
 ### Go Version
 
-This repository uses Go 1.25.6.
+This repository uses Go 1.26.
 
 ### Testing Framework
 
