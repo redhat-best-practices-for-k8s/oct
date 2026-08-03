@@ -39,7 +39,7 @@ jobs:
           ./scripts/curl-endpoints.sh
       
       - name: Authenticate against Quay.io (redhat-best-practices-for-k8s)
-        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: quay.io
           # Use a Robot Account to authenticate against Quay.io
@@ -90,7 +90,7 @@ jobs:
           ./scripts/curl-endpoints.sh
 
       - name: Authenticate against Quay.io (testnetworkfunction)
-        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: quay.io
           # Use a Robot Account to authenticate against Quay.io
