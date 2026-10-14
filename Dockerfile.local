@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/ubi:9.8@sha256:803a35a0a8e6a84e8d8b00ae862ac501526211c9b11a61b0fda2afe9c6e4834f AS builder
+FROM registry.access.redhat.com/ubi9/ubi:9.8@sha256:16e9e43d99e181463513cc84a514859b1abb9460f1c4d9e208da4b4e51cd5cc3 AS builder
 ARG OCT_LOCAL_FOLDER
 
 ENV OCT_FOLDER=/usr/oct
@@ -50,7 +50,7 @@ RUN ./oct fetch --operator --container --helm && \
 
 # Copy the state into a new flattened image to reduce (layers) size.
 # It should also hide the pull token.
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:1d7c5517a4a1a8e2688620b39ee980e82505ca1ab7ae5541b5463120ae9b3897
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:c4c285d42941ebb2bd4da878479008e1e4536bb599aad1dbe568f89de9053661
 ENV OCT_FOLDER=/usr/oct
 
 COPY --from=builder ${OCT_FOLDER} ${OCT_FOLDER}
