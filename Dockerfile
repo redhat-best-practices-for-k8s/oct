@@ -1,6 +1,6 @@
+# syntax=docker/dockerfile:1
 FROM --platform=$BUILDPLATFORM registry.access.redhat.com/ubi9/ubi:9.9@sha256:1e9f0ed9fceafb40878bc1705ff124aa150e3fed873f18c42cdc2dded319e0a8 AS builder
 ARG OCT_REPO=github.com/test-network-function/oct.git
-ARG TOKEN
 ENV OCT_FOLDER=/usr/oct
 ENV OCT_DB_FOLDER=${OCT_FOLDER}/cmd/tnf/fetch/data
 
@@ -32,7 +32,10 @@ RUN \
 ENV PATH=${PATH}:"/usr/local/go/bin":${GOPATH}/"bin"
 
 WORKDIR /root
-RUN git clone https://${TOKEN}@$OCT_REPO
+RUN --mount=type=secret,id=TOKEN,required=true \
+    GIT_TERMINAL_PROMPT=0 git -c credential.helper= \
+    -c credential.helper='!authenticate() { if [ "$1" = get ]; then printf "%s\n" "username=x-access-token" "password=$(cat /run/secrets/TOKEN)"; fi; }; authenticate' \
+    clone "https://${OCT_REPO}"
 WORKDIR /root/oct
 
 RUN make build-oct && \
@@ -46,7 +49,6 @@ RUN ./oct fetch --operator --container --helm && \
     chmod -R 777 ${OCT_DB_FOLDER}
 
 # Copy the oct folder to a new minimal flattened image to reduce size.
-# It should also hide the pull token.
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:baafce2d34783a28b4a472779f304e97e00f9d35c99553bc53b068b14344d9a9
 ENV OCT_FOLDER=/usr/oct
 
